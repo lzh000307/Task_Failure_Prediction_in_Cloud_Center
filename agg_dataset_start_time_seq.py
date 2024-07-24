@@ -29,6 +29,8 @@ def load_data():
     dfs_n = ['job_name', 'worker_name', 'cpu_usage', 'gpu_wrk_util', 'avg_mem', 'max_mem', 'avg_gpu_wrk_mem', 'max_gpu_wrk_mem', 'read', 'write']
     dfg_n = ['inst_id', 'group', 'workload']
 
+    time_n = ['start_time', 'end_time']
+
     dfi = dfi[dfi_n]
     dft = dft[dft_n]
     dfs = dfs[dfs_n]
@@ -37,10 +39,11 @@ def load_data():
     # Merge instance table with task and sensor tables
     dfi = dfi.merge(dft, on=['job_name', 'task_name'], how='left')
     dfi = dfi.merge(dfs, on=['job_name', 'worker_name'], how='left')
-    dfi = dfi.merge(dfg, on='inst_id', how='left')
+    # dfi = dfi.merge(dfg, on='inst_id', how='left')
 
     # Drop rows with NaN in the selected sensor columns
     dfi.dropna(subset=dfs_n, inplace=True)
+    # dfi.dropna(subset=time_n, inplace=True)
 
     # Convert timestamps
     dfi['start_time'] = pd.to_datetime(dfi['start_time'], unit='s', origin='unix', utc=True).dt.tz_convert('Asia/Shanghai')

@@ -16,6 +16,21 @@ from scipy.sparse import hstack, csr_matrix
 
 
 # def load_data():
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import category_encoders as ce
+import torch
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import category_encoders as ce
+import torch
+
+
 def load_data():
     pd.set_option('display.max_columns', None)
     DATA_DIR = 'data/'  # Adjust to your actual data directory
@@ -24,8 +39,12 @@ def load_data():
     # Sort by 'group' and 'time'
     df.sort_values(by=['group', 'time'], inplace=True)
 
-    # Group by 'group' and pad sequences
-    grouped = df.groupby('group')
+    # Split the dataset into train and test sets
+    train_df = df.iloc[10000:]
+    test_df = df.iloc[:10000]
+
+    # Group by 'group' for the training set and pad sequences
+    grouped = train_df.groupby('group', group_keys=False)
 
     # Define a function to pad sequences
     def pad_sequence(group, size=20, pad_value=0):
@@ -38,30 +57,62 @@ def load_data():
             arr = np.vstack([arr, padding])
         return arr[:size]  # Return only the first 'size' elements
 
-    # Apply padding function to each group
-    df_padded = np.vstack(grouped.apply(lambda g: pad_sequence(g, size=20, pad_value=0)))
+    # Apply padding function to each group and reset index for training set
+    train_df_padded = np.array([pad_sequence(group, size=20, pad_value=0) for _, group in grouped])
 
-    # Create a DataFrame from the padded data
-    df_padded = pd.DataFrame(df_padded, columns=df.columns)
+    # For the test set, we take sequences as they are (length 1)
+    test_df_sequences = np.array([group.values[:1] for _, group in test_df.groupby('group', group_keys=False)])
 
-    # Feature engineering
-    numeric_features = df_padded[
-        ['cpu_usage', 'gpu_wrk_util', 'avg_mem', 'max_mem', 'avg_gpu_wrk_mem', 'max_gpu_wrk_mem', 'read', 'write',
-         'time']]
+    # Feature engineering for training set
+    numeric_features_train = train_df_padded[
+                             :, :, [df.columns.get_loc(col) for col in
+                                    ['cpu_usage', 'gpu_wrk_util', 'avg_mem', 'max_mem', 'avg_gpu_wrk_mem',
+                                     'max_gpu_wrk_mem', 'read', 'write', 'time']]
+                             ]
     scaler = StandardScaler()
-    numeric_scaled = scaler.fit_transform(numeric_features)
+    numeric_scaled_train = scaler.fit_transform(
+        numeric_features_train.reshape(-1, numeric_features_train.shape[-1])).reshape(numeric_features_train.shape)
 
-    # Encode categorical features
-    categorical_features = df_padded[['job_name', 'machine', 'gpu_type', 'group']]
-    encoder = ce.HashingEncoder(cols=['job_name', 'machine', 'gpu_type', 'group'], n_components=100)
-    categorical_encoded = encoder.fit_transform(categorical_features)
+    # Feature engineering for test set
+    numeric_features_test = test_df_sequences[
+                            :, :, [test_df.columns.get_loc(col) for col in
+                                   ['cpu_usage', 'gpu_wrk_util', 'avg_mem', 'max_mem', 'avg_gpu_wrk_mem',
+                                    'max_gpu_wrk_mem', 'read', 'write', 'time']]
+                            ]
+    numeric_scaled_test = scaler.transform(numeric_features_test.reshape(-1, numeric_features_test.shape[-1])).reshape(
+        numeric_features_test.shape)
 
-    # Combine features
-    X = np.hstack((numeric_scaled, categorical_encoded))
-    y = df_padded['status'].apply(lambda x: 1 if x == 'Terminated' else 0).values
+    # Encode categorical features for training set
+    categorical_features_train = train_df_padded[:, :,
+                                 [df.columns.get_loc(col) for col in ['job_name', 'machine', 'gpu_type', 'group']]]
+    encoder = ce.HashingEncoder(cols=[0, 1, 2, 3], n_components=100)
+    categorical_encoded_train = encoder.fit_transform(
+        categorical_features_train.reshape(-1, categorical_features_train.shape[-1])).values.reshape(
+        categorical_features_train.shape[0], categorical_features_train.shape[1], -1)
 
-    # Split dataset
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=30)
+    # Encode categorical features for test set
+    categorical_features_test = test_df_sequences[:, :,
+                                [test_df.columns.get_loc(col) for col in ['job_name', 'machine', 'gpu_type', 'group']]]
+    categorical_encoded_test = encoder.transform(
+        categorical_features_test.reshape(-1, categorical_features_test.shape[-1])).values.reshape(
+        categorical_features_test.shape[0], categorical_features_test.shape[1], -1)
+
+    # Combine features for training set
+    X_train = np.concatenate((numeric_scaled_train, categorical_encoded_train), axis=-1)
+    y_train = train_df_padded[:, :, df.columns.get_loc('status')].reshape(-1)
+    y_train = np.where(y_train == 'Terminated', 1, 0)
+
+    # Combine features for test set
+    X_test = np.concatenate((numeric_scaled_test, categorical_encoded_test), axis=-1)
+    y_test = test_df_sequences[:, :, test_df.columns.get_loc('status')].reshape(-1)
+    y_test = np.where(y_test == 'Terminated', 1, 0)
+
+    # shape
+    print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+
+
+    # Convert to torch tensors
     X_train = torch.tensor(X_train, dtype=torch.float32)
     X_test = torch.tensor(X_test, dtype=torch.float32)
     y_train = torch.tensor(y_train, dtype=torch.float32)
