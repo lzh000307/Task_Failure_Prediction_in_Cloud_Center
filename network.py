@@ -16,7 +16,8 @@ class BiLSTM(nn.Module):
         h0 = torch.zeros(self.num_layers * 2, batch_size, self.hidden_dim).to(x.device)  # 2 for bidirection
         c0 = torch.zeros(self.num_layers * 2, batch_size, self.hidden_dim).to(x.device)  # 2 for bidirection
 
-        x = x.unsqueeze(1)  # Ensure x is (batch_size, sequence_length, input_size)
+        #x = x.unsqueeze(1)  # Ensure x is (batch_size, sequence_length, input_size)
         out, _ = self.lstm(x, (h0, c0))  # x should now be (batch_size, sequence_length, input_size)
-        out = self.fc(out[:, -1, :])  # Use the output of the last LSTM cell
+        # out = self.fc(out[:, -1, :])  # Use the output of the last LSTM cell
+        out = self.fc(out)  # Apply the fully connected layer to each time step
         return out
