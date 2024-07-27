@@ -20,6 +20,7 @@ def load_data():
     dfs = get_df(DATA_DIR + 'pai_sensor_table.csv')
     dfg = get_df(DATA_DIR + 'pai_group_tag_table.csv')
     dfj = get_df(DATA_DIR + 'pai_job_table.csv')
+    dfm = get_df(DATA_DIR + 'pai_machine_metric.csv')
 
     # We only need failed and terminated instances
     dfi = dfi[dfi['status'].isin(['Failed', 'Terminated'])]
@@ -32,6 +33,8 @@ def load_data():
              'avg_gpu_wrk_mem', 'max_gpu_wrk_mem', 'read', 'write']
     dfg_n = ['inst_id', 'group', 'workload']
     dfj_n = ['job_name', 'inst_id', 'start_time', 'end_time', 'user']
+    dfm_n = ['worker_name', 'machine', 'machine_cpu', 'machine_cpu_kernel', 'machine_gpu',
+                'machine_load_1', 'machine_num_worker']
 
     time_n = ['start_time', 'end_time']
 
@@ -41,6 +44,7 @@ def load_data():
     dfs = dfs[dfs_n]
     dfg = dfg[dfg_n]
     dfj = dfj[dfj_n]
+    dfm = dfm[dfm_n]
 
 
     # change the column names
@@ -51,16 +55,23 @@ def load_data():
     dfj.columns = ['job_name', 'inst_id', 'start_time_job', 'end_time_job', 'user']
 
 
+
     # Merge instance table with task and sensor tables
     dfi = dfi.merge(dft, on=['job_name', 'task_name'], how='left')
     dfi = dfi.merge(dfs, on=['job_name', 'worker_name'], how='left')
     dfi = dfi.merge(dfj, on=['job_name', 'inst_id'], how='left')
+    dfi = dfi.merge(dfm, on=['worker_name', 'machine'], how='left')
     dfi = dfi.merge(dfg, on='inst_id', how='left')
+
 
     # if start_time and start_time_task and start_time_job are all NaN, drop the row
     dfi.dropna(subset=['start_time', 'start_time_task', 'start_time_job'], how='all', inplace=True)
     # if end_time and end_time_task and end_time_job are all NaN, drop the row
     dfi.dropna(subset=['end_time', 'end_time_task', 'end_time_job'], how='all', inplace=True)
+    # drop status as 'terminated'
+    dfi = dfi[dfi['status'].isin(['Failed', 'Running', 'Interrupted', 'Waiting'])]
+    # drop empty 'machine_cpu' rows
+    dfi.dropna(subset=['machine_cpu'], inplace=True)
 
     # if start_time is NaN, then fill it with start_time_task, if still NaN, then fill it with
     # start_time_job
@@ -87,12 +98,12 @@ def load_data():
     dfi = dfi.sort_values(by=['group', 'time'])
 
     # select 2,000 rows
-    # dfi = dfi[:2000]
+    dfi = dfi[:2000]
 
     # Export to CSV
-    dfi.to_csv(DATA_DIR + 'start_time_seq_job_ft_min.csv', index=True)
+    dfi.to_csv(DATA_DIR + 'machine_no_terminated.csv', index=True)
 
-    print("数据已整合并保存至 'start_time_seq_job_ft_min.csv'.")
+    print("数据已整合并保存至 'machine_no_terminated.csv'.")
 
 
 load_data()
