@@ -21,8 +21,14 @@ def load_data():
     dfg = get_df(DATA_DIR + 'pai_group_tag_table.csv')
     dfj = get_df(DATA_DIR + 'pai_job_table.csv')
 
+    # 原始数据统计
+    original_data_count = len(dfi)
+    original_group_count = dfg['group'].nunique()
+    original_job_count = dfj['job_name'].nunique()
+    original_task_count = dft['task_name'].nunique()
+
     # We only need failed and terminated instances
-    dfi = dfi[dfi['status'].isin(['Failed', 'Terminated'])]
+    # dfi = dfi[dfi['status'].isin(['Failed', 'Terminated'])]
 
     # Select needed columns
     dfi_n = ['job_name', 'task_name', 'inst_name', 'status', 'inst_id', 'worker_name',
@@ -42,14 +48,12 @@ def load_data():
     dfg = dfg[dfg_n]
     dfj = dfj[dfj_n]
 
-
     # change the column names
     dfi.columns = ['job_name', 'task_name', 'inst_name', 'status', 'inst_id',
                    'worker_name', 'machine', 'start_time', 'end_time']
     dft.columns = ['job_name', 'task_name', 'inst_num', 'gpu_type', 'start_time_task',
                    'end_time_task']
     dfj.columns = ['job_name', 'inst_id', 'start_time_job', 'end_time_job', 'user']
-
 
     # Merge instance table with task and sensor tables
     dfi = dfi.merge(dft, on=['job_name', 'task_name'], how='left')
@@ -89,10 +93,31 @@ def load_data():
     # select 2,000 rows
     # dfi = dfi[:2000]
 
-    # Export to CSV
-    dfi.to_csv(DATA_DIR + 'start_time_seq_job_ft_min.csv', index=True)
+    # 处理后数据统计
+    processed_data_count = len(dfi)
+    processed_group_count = dfi['group'].nunique() if 'group' in dfi.columns else 0
+    processed_job_count = dfi['inst_id'].nunique()
+    # processed_task_count = dfi['task_name'].nunique()
 
-    print("数据已整合并保存至 'start_time_seq_job_ft_min.csv'.")
+    # 计算比例
+    job_ratio = processed_job_count / original_job_count if original_job_count else 0
+    # task_ratio = processed_task_count / original_task_count if original_task_count else 0
+
+    # Export to CSV
+    dfi.to_csv(DATA_DIR + 'start_time_seq_job_check.csv', index=True)
+
+    print("原始数据条数: ", original_data_count)
+    print("处理后数据条数: ", processed_data_count)
+    print("原始分组数: ", original_group_count)
+    print("处理后分组数: ", processed_group_count)
+    print("原始job数: ", original_job_count)
+    print("处理后job数: ", processed_job_count)
+    # print("原始task数: ", original_task_count)
+    # print("处理后task数: ", processed_task_count)
+    print("job数量比例: ", job_ratio)
+    # print("task数量比例: ", task_ratio)
+    print("数据已整合并保存至 'start_time_seq_job_check.csv'.")
+
 
 
 load_data()

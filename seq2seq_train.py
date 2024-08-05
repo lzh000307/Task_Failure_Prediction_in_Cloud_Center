@@ -9,7 +9,8 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-from s2s_lstm import s2s_lstm
+from s2s_lstm import Seq2SeqModel
+from SequenceDataset import SequenceDataset
 from lstm import LSTM
 from network import BiLSTM
 from RNN import RNN
@@ -23,10 +24,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import category_encoders as ce
 
-from s2s_bi_ncp import s2s_bi_ncp
-from s2s_bi_lstm import s2s_bi_lstm
-from s2s_ncp import s2s_ncp
 
+def split_data(group_data, group_labels, test_size=0.30, random_state=42):
+    indices = list(range(len(group_data)))
+    train_indices, test_indices = train_test_split(indices, test_size=test_size, random_state=random_state)
+
+    train_data = [group_data[i] for i in train_indices]
+    train_labels = [group_labels[i] for i in train_indices]
+    test_data = [group_data[i] for i in test_indices]
+    test_labels = [group_labels[i] for i in test_indices]
+
+    return train_data, train_labels, test_data, test_labels
 
 def pad_or_truncate_features(series, length, feature_dim):
     if len(series) >= length:
@@ -84,48 +92,29 @@ def load_data():
         group_features = features[group_df.index]
         group_target = df.loc[group_df.index, 'status'].values
 
-        series_features = pad_or_truncate_features(group_features, 10, feature_dim)
-        series_target = pad_or_truncate_labels(group_target, 10)
+        group_data.append(group_features)
+        group_labels.append(group_target)
 
-        group_data.append(series_features)
-        group_labels.append(series_target)
+    # Split data into training and testing sets
+    train_data, train_labels, test_data, test_labels = split_data(group_data, group_labels, test_size=0.30, random_state=42)
 
-    X = np.array(group_data)
-    y = np.array(group_labels)
+    train_dataset = SequenceDataset(train_data, train_labels)
+    test_dataset = SequenceDataset(test_data, test_labels)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+    return train_dataset, test_dataset
 
-    print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")        # Should print (number_of_groups, 10, feature_dimension)
-    print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")        # Should print (number_of_groups, 10)
 
-    # write back
-    np.save('X_train.npy', X_train)
-    np.save('X_test.npy', X_test)
-    np.save('y_train.npy', y_train)
-    np.save('y_test.npy', y_test)
-
-    # Convert to torch tensors
-    X_train = torch.tensor(X_train, dtype=torch.float32)
-    X_test = torch.tensor(X_test, dtype=torch.float32)
-    y_train = torch.tensor(y_train, dtype=torch.float32)
-    y_test = torch.tensor(y_test, dtype=torch.float32)
-    # shape
-
-    return X_train, X_test, y_train, y_test
-
-def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_epochs=4, batch_size=1024, confidence=0.8):
+def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_epochs=4, batch_size=512):
     # dataloader
     train_dataloader = DataLoader(train_loader, batch_size=batch_size, shuffle=True)
-    # labels = train_dataloader.dataset.tensors[1]
-    # features = train_dataloader.dataset.tensors[0]
     # positive_data = labels.sum()
     # negative_data = len(labels) - positive_data
     # pos_weight = negative_data / positive_data
     # # pos_weight = 0.21274018287658691
-    # pos_weight = 0.32
+    pos_weight = 0.32
     # pos_weight = 0.35
     # # to tensor
-    # pos_weight = torch.tensor(pos_weight, dtype=torch.float32)
+    pos_weight = torch.tensor(pos_weight, dtype=torch.float32)
     # print("len(labels): ", len(labels))
     # print("labels.sum(): ", labels.sum())
     # print(f"Positive weight: {pos_weight}")
@@ -163,8 +152,6 @@ def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_
             # print(f"Batch {i + 1} - Features shape: {features.shape}, Labels shape: {labels.shape}")
             outputs = model(features)
             # print(f"Outputs shape before squeeze: {outputs.shape}")
-            # print(outputs.shape, labels.shape)
-
 
             outputs = outputs.squeeze(-1)
             # outputs = outputs.squeeze(0)
@@ -210,7 +197,7 @@ def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_
 
                 # Calculate accuracy for validation
                 outputs = torch.sigmoid(outputs)
-                predicted = (outputs > confidence).float()
+                predicted = (outputs > 0.8).float()
                 # total += labels.size(0)
                 # correct += (predicted == labels).sum().item()
                 # only check the first time series in labels and outputs
@@ -253,9 +240,9 @@ def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_
             val_recalls.append(recall)
             val_f1_scores.append(f1_score)
 
-            print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}, ', end="")
-            print(f'Labels Positive Rate: {labels_positive_rate / total}, Predicted Positive Rate: {predicted_positive_rate / total}, ', end="")
-            print(f'Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}, Total: {total}')
+            print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}')
+            print(f'Labels Positive Rate: {labels_positive_rate / total}, Predicted Positive Rate: {predicted_positive_rate / total}')
+            print(f'Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}')
         # scheduler.step()
 
 
@@ -264,7 +251,8 @@ def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_
 
     return train_losses, val_losses, val_accuracies, val_precisions, val_recalls, val_f1_scores, epoch_labels, epoch_outputs
 
-def plot_model_comparisons(results, metric_names, model_names):
+def plot_model_comparisons(results, metric_names):
+    model_names = ["RNN", "LSTM", "BiLSTM"]
     epochs = results.shape[2]
     fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 10))  # Adjust for five validation metrics
 
@@ -281,7 +269,6 @@ def plot_model_comparisons(results, metric_names, model_names):
 
     plt.tight_layout()
     plt.show()
-
 
 def plot_model_comparisons_bar(results, metric_names, model_names):
     # model_names = ["RNN", "LSTM", "BiLSTM"]
@@ -335,78 +322,38 @@ def plot_roc_from_saved_data(filename):
 
 
 if __name__ == '__main__':
-    # if already have the data
-    # if os.path.exists('X_train.npy') and os.path.exists('X_test.npy') and os.path.exists('y_train.npy') and os.path.exists('y_test.npy'):
-    #     X_train = np.load('X_train.npy')
-    #     X_test = np.load('X_test.npy')
-    #     y_train = np.load('y_train.npy')
-    #     y_test = np.load('y_test.npy')
-    #     # to tensor
-    #     X_train = torch.tensor(X_train, dtype=torch.float32)
-    #     X_test = torch.tensor(X_test, dtype=torch.float32)
-    #     y_train = torch.tensor(y_train, dtype=torch.float32)
-    #     y_test = torch.tensor(y_test, dtype=torch.float32)
-    # else:
-    # X_train, X_test, y_train, y_test  = load_data()
-    X_train = np.load('X_train2.npy')
-    X_test = np.load('X_test2.npy')
-    y_train = np.load('y_train2.npy')
-    y_test = np.load('y_test2.npy')
-    # to tensor
-    X_train = torch.tensor(X_train, dtype=torch.float32)
-    X_test = torch.tensor(X_test, dtype=torch.float32)
-    y_train = torch.tensor(y_train, dtype=torch.float32)
-    y_test = torch.tensor(y_test, dtype=torch.float32)
-    # print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")  # Should print (number_of_groups, 10, feature_dimension)
-    # print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")  # Should print (number_of_groups, 10)
+    train_dataset, test_dataset  = load_data()
     # using gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     print(f"Using {device} device")
 
-    print("input_dim: ", X_train.shape[2], X_train.shape[1])
+
 
 
     # models = [RNN(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-    #           LSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)
-    #           ]
-    models = [
-        s2s_lstm(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        s2s_bi_lstm(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        NCPModel(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        BiNCPModel(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        BiLSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        RNN(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        LSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)
-              ]
-    # models = [s2s_ncp(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-    #           s2s_bi_ncp(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)]
-    train_dataset = TensorDataset(X_train, y_train)
-    test_dataset = TensorDataset(X_test, y_test)
+    #           LSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
+    #           BiLSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)]
+    models = [Seq2SeqModel(input_dim=18, hidden_dim=64, output_dim=1, num_layers=1)]
 
-    num_epochs = 10
+    num_epochs = 20
     num_metrics = 6  # Including train_losses and five validation metrics
-    results = np.zeros((len(models), num_metrics, num_epochs))  # models x 6 metrics x num_epochs
+    results = np.zeros((len(models) , num_metrics, num_epochs))  # models x 6 metrics x num_epochs
     epoch_labels_outputs = []
 
 
     for idx, model in enumerate(models):
         model.to(device)
-        metrics = train_and_validate(model, train_dataset, test_dataset, device, lr=0.001, num_epochs=num_epochs, batch_size=2048, confidence=0.7)
+        metrics = train_and_validate(model, train_dataset, test_dataset, device, lr=0.0013, num_epochs=num_epochs, batch_size=1024)
         for metric_idx, metric in enumerate(metrics[:-2]):  # Including train_losses
             results[idx, metric_idx, :] = metric
         epoch_labels_outputs.append((metrics[-2], metrics[-1]))
 
-
-
     # save the results
-    np.save('results_ncplstm_no_posweight_0805_all_2.npy', results)
+    np.save('results_ncplstm_no_posweight_s2s.npy', results)
     # epoch_labels_outputs to numpy
-    # epoch_labels_outputs = np.array(epoch_labels_outputs)
-    # np.save('epoch_labels_outputs_3070.npy', epoch_labels_outputs)
-    with open('results_ncplstm_no_posweight_0805_all_2.pkl', 'wb') as f:
+    with open('epoch_labels_outputs_3070_1.pkl', 'wb') as f:
         pickle.dump(epoch_labels_outputs, f)
-
 
     # 加载保存的结果数据
     # results = np.load('results_ncp.npy')
@@ -426,15 +373,15 @@ if __name__ == '__main__':
     # print(results.shape)
 
     # remove result's to (2, 6, 10)
-    print(results.shape)
-    # model_names = ["NCP", "BiNCP"]
-    # model_names = ["NCP", "BiNCP", "RNN", "LSTM", "BiLSTM"]
-    model_names = ["S2S_LSTM", "S2S_BiLSTM", "NCP", "BiNCP", "BiLSTM", "RNN", "LSTM"]
-    # model_names = ["RNN", "LSTM"]
+    # print(results.shape)
+    # model_names = ["NCP", "BiNCP", "BiLSTM"]
+    # # model_names = ["NCP", "BiNCP", "RNN", "LSTM", "BiLSTM"]
+    #
+    # # Plot the model comparisons for validation metrics
+    # metric_names = ["Validation Loss", "Accuracy", "Precision", "Recall", "F1 Score"]
+    # plot_model_comparisons_bar(results[:, 1:, 8:], metric_names, model_names)  # Skip train_losses for plotting
+    # plot_roc_from_saved_data('epoch_labels_outputs_3070.npy')
 
-    # Plot the model comparisons for validation metrics
-    metric_names = ["Validation Loss", "Accuracy", "Precision", "Recall", "F1 Score"]
-    plot_model_comparisons_bar(results[:, 1:, :], metric_names, model_names)  # Skip train_losses for plotting
-    plot_model_comparisons(results[:, 1:, :], metric_names, model_names)  # Skip train_losses for plotting
-    # plot_roc_from_saved_data('epoch_labels_outputs_3070_1.pkl')
+
+
 
