@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
 import category_encoders as ce
 
@@ -125,16 +125,29 @@ def load_data(group_size=10):
     print("Instance count:", instance_count)
     print("Instance count 2:", counts)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
-
-    print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")        # Should print (number_of_groups, 10, feature_dimension)
-    print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")        # Should print (number_of_groups, 10)
-
-    # # write back
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+    #
+    # print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")        # Should print (number_of_groups, 10, feature_dimension)
+    # print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")        # Should print (number_of_groups, 10)
+    #
+    # # # write back
     # np.save('X_train2.npy', X_train)
     # np.save('X_test2.npy', X_test)
     # np.save('y_train2.npy', y_train)
     # np.save('y_test2.npy', y_test)
+
+    folds = KFold(n_splits=4, shuffle=True, random_state=42)
+
+    for i, (train_idx, test_idx) in enumerate(folds.split(X)):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        np.save(f'X_train_fold{i+1}.npy', X_train)
+        np.save(f'X_test_fold{i+1}.npy', X_test)
+        np.save(f'y_train_fold{i+1}.npy', y_train)
+        np.save(f'y_test_fold{i+1}.npy', y_test)
+
+    print("Data saved for each fold.")
 
     return X_train, X_test, y_train, y_test
 

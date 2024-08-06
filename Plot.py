@@ -53,6 +53,53 @@ def plot_model_comparisons_bar(results, metric_names, model_names):
     plt.tight_layout()
     plt.show()
 
+def plot_best_comparisons_bar(results, metric_names, model_names):
+    num_metrics = len(metric_names)
+    num_models = len(model_names)
+
+    # 设定不同的颜色，确保颜色数量足够
+    # colors = list(mcolors.TABLEAU_COLORS)  # 使用Matplotlib的Tableau颜色，或选择其他颜色列表
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
+              'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
+    fig, axes = plt.subplots(nrows=num_metrics, figsize=(4, 10), sharex=True)  # 更紧凑的图形
+
+    bar_width = 1  # 将柱子宽度设置为1，让柱子之间没有间隙
+
+    for metric_idx, ax in enumerate(axes):
+        max_vals = np.zeros(num_models)
+
+        for model_idx in range(num_models):
+            max_vals[model_idx] = np.max(results[model_idx, metric_idx, :])
+
+        x_pos = np.arange(num_models)
+        bars = ax.bar(x_pos, max_vals, bar_width, alpha=0.7)
+
+        # 为每个柱子设置不同的颜色
+        for bar, color in zip(bars, colors):
+            bar.set_color(color)
+
+        ax.set_ylabel(metric_names[metric_idx])
+        ax.set_title(f'Maximum {metric_names[metric_idx]} Across All Epochs')
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(model_names)
+        # move legend outside of the plot`
+        ax.legend(bars, model_names, title="Model", loc="center left", bbox_to_anchor=(1, 0.5))
+        # 设置Y轴范围为0.97到1
+        # ax.set_ylim([0.985, 1])
+        # find the min value on the y-axis
+        min_val = np.min(max_vals)
+        # find the max value on the y-axis
+        max_val = np.max(max_vals)
+        # set the y-axis limit with margin
+        ax.set_ylim(min_val - 0.1 * (max_val - min_val), max_val + 0.1 * (max_val - min_val))
+        # empty the x-axis label
+        ax.set_xlabel('')
+
+
+
+    plt.tight_layout()
+    plt.show()
+
 
 def plot_roc_from_saved_data(filename):
     epoch_labels_outputs = np.load(filename, allow_pickle=True)
@@ -81,8 +128,11 @@ if __name__ == '__main__':
 
     # 加载保存的结果数据
     results = np.load('results_ncplstm_no_posweight_0805_all.npy')
-    result2 = np.load('results_ncplstm_no_posweight_0805_rnn_lstm.npy')
-    results = np.vstack((results, result2[:2]))
+    # remove 2-4
+    # results = np.delete(results, 2, axis=0)
+    # results = np.delete(results, 2, axis=0)
+    # result2 = np.load('results_ncplstm_no_posweight_0805_rnn_lstm.npy')
+    # results = np.vstack((results, result2[:2]))
     # result2 = np.load('results_ncplstm_no_posweight_s2sbilstm.npy')
     # results = np.vstack((results, result2[:1]))
     # results_lstm = np.load('results_lstm.npy')
@@ -98,10 +148,11 @@ if __name__ == '__main__':
     # remove result's to (2, 6, 10)
     print(results.shape)
     model_names = ["S2S_LSTM", "S2S_BiLSTM", "NCP", "BiNCP", "BiLSTM", "RNN", "LSTM"]
+    # model_names = ["S2S_LSTM", "S2S_BiLSTM", "BiLSTM", "RNN", "LSTM"]
     # model_names = ["NCP", "BiNCP", "RNN", "LSTM", "BiLSTM"]
 
     # Plot the model comparisons for validation metrics
-    metric_names = ["Validation Loss", "Accuracy", "Precision", "Recall", "F1 Score"]
+    metric_names = ["Accuracy", "Precision", "Recall", "F1 Score"]
     # plot_model_comparisons_bar(results[:, 1:, 2:], metric_names, model_names)  # Skip train_losses for plotting
-    plot_model_comparisons(results[:, 1:, :], metric_names, model_names)  # Skip train_losses for plotting
+    plot_best_comparisons_bar(results[:, 2:, 1:], metric_names, model_names)  # Skip train_losses for plotting
     # plot_roc_from_saved_data('epoch_labels_outputs_3070.npy')

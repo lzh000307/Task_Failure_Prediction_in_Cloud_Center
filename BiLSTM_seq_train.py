@@ -370,14 +370,15 @@ if __name__ == '__main__':
     # models = [RNN(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
     #           LSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)
     #           ]
+    hidden_dim = 32
     models = [
-        s2s_lstm(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        s2s_bi_lstm(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        NCPModel(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        BiNCPModel(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        BiLSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        RNN(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
-        LSTM(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)
+        s2s_lstm(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        s2s_bi_lstm(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        NCPModel(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        BiNCPModel(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        BiLSTM(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        RNN(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1),
+        LSTM(input_dim=X_train.shape[2], hidden_dim=hidden_dim, output_dim=1, num_layers=1)
               ]
     # models = [s2s_ncp(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1),
     #           s2s_bi_ncp(input_dim=X_train.shape[2], hidden_dim=64, output_dim=1, num_layers=1)]
@@ -400,11 +401,11 @@ if __name__ == '__main__':
 
 
     # save the results
-    np.save('results_ncplstm_no_posweight_0805_all_2.npy', results)
+    np.save('results_ncplstm_no_posweight_0805_hid_32.npy', results)
     # epoch_labels_outputs to numpy
     # epoch_labels_outputs = np.array(epoch_labels_outputs)
     # np.save('epoch_labels_outputs_3070.npy', epoch_labels_outputs)
-    with open('results_ncplstm_no_posweight_0805_all_2.pkl', 'wb') as f:
+    with open('results_ncplstm_no_posweight_0805_hid_32.pkl', 'wb') as f:
         pickle.dump(epoch_labels_outputs, f)
 
 
@@ -435,6 +436,6 @@ if __name__ == '__main__':
     # Plot the model comparisons for validation metrics
     metric_names = ["Validation Loss", "Accuracy", "Precision", "Recall", "F1 Score"]
     plot_model_comparisons_bar(results[:, 1:, :], metric_names, model_names)  # Skip train_losses for plotting
-    plot_model_comparisons(results[:, 1:, :], metric_names, model_names)  # Skip train_losses for plotting
+    plot_model_comparisons(results[:, 1:, 1:], metric_names, model_names)  # Skip train_losses for plotting
     # plot_roc_from_saved_data('epoch_labels_outputs_3070_1.pkl')
 
