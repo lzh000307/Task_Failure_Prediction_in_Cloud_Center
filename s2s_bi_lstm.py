@@ -48,3 +48,4 @@ class s2s_bi_lstm(nn.Module):
 
         decoder_outputs = torch.cat(decoder_outputs, dim=1)
         return decoder_outputs
+

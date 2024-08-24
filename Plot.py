@@ -61,7 +61,7 @@ def plot_best_comparisons_bar(results, metric_names, model_names):
     # colors = list(mcolors.TABLEAU_COLORS)  # 使用Matplotlib的Tableau颜色，或选择其他颜色列表
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
               'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
-    fig, axes = plt.subplots(nrows=num_metrics, figsize=(4, 10), sharex=True)  # 更紧凑的图形
+    fig, axes = plt.subplots(nrows=num_metrics, figsize=(3, 10), sharex=True)  # 更紧凑的图形
 
     bar_width = 1  # 将柱子宽度设置为1，让柱子之间没有间隙
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     # np.save('epoch_labels_outputs_3070.npy', epoch_labels_outputs)
 
     # 加载保存的结果数据
-    results = np.load('results_ncplstm_no_posweight_0805_all.npy')
+    results = np.load('results_ncplstm_no_posweight_0805_all_2.npy')
     # remove 2-4
     # results = np.delete(results, 2, axis=0)
     # results = np.delete(results, 2, axis=0)
@@ -150,6 +150,7 @@ if __name__ == '__main__':
     model_names = ["S2S_LSTM", "S2S_BiLSTM", "NCP", "BiNCP", "BiLSTM", "RNN", "LSTM"]
     # model_names = ["S2S_LSTM", "S2S_BiLSTM", "BiLSTM", "RNN", "LSTM"]
     # model_names = ["NCP", "BiNCP", "RNN", "LSTM", "BiLSTM"]
+    # model_names = ["NCP", "BiNCP", "BiLSTM"]
 
     # Plot the model comparisons for validation metrics
     metric_names = ["Accuracy", "Precision", "Recall", "F1 Score"]

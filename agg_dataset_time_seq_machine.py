@@ -98,7 +98,7 @@ def load_data():
     dfi = dfi.sort_values(by=['group', 'time'])
 
     # select 2,000 rows
-    dfi = dfi[:2000]
+    # dfi = dfi[:2000]
 
     # Export to CSV
     dfi.to_csv(DATA_DIR + 'machine_no_terminated.csv', index=True)

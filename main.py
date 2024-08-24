@@ -160,6 +160,7 @@ if __name__ == '__main__':
     model = BiLSTM(input_dim=X_train.shape[1], hidden_dim=64, output_dim=1, num_layers=1).to(device)
     train_dataset = TensorDataset(X_train, y_train)
     test_dataset = TensorDataset(X_test, y_test)
+    #
     # train_dataset = dataset(X_train, y_train)
     # test_dataset = dataset(X_test, y_test)
     train_and_validate(model, train_dataset, test_dataset, device, lr=0.008, num_epochs=20, batch_size=4096)
