@@ -13,7 +13,6 @@ class RNN(nn.Module):
         batch_size = x.size(0)
         # Initialize hidden state (no cell state needed)
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(x.device)
-
-        out, _ = self.rnn(x, h0)  # Pass in the input and hidden state into the RNN
-        out = self.fc(out)  # Apply the fully connected layer to the last time step
+        out, _ = self.rnn(x, h0)
+        out = self.fc(out)
         return out

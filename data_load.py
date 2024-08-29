@@ -50,6 +50,43 @@ def pad_or_truncate_labels(labels, length):
 
 
 def load_data(group_size=10):
+    """
+    Loads and preprocesses data from a CSV file, standardizes numeric features, encodes categorical features,
+    and prepares the data for machine learning model training.
+
+    Parameters:
+    ----------
+    group_size : int, optional
+        The number of instances per group after padding or truncating. Default is 10.
+
+    Returns:
+    -------
+    None
+        The function does not return any value but saves preprocessed training and testing datasets for each fold.
+
+    Steps:
+    ------
+    1. Load the dataset from a specified directory.
+    2. Sort the data by 'group' and 'time' columns.
+    3. Select specific columns for processing.
+    4. Preprocess the numeric features by standardizing them using `StandardScaler`.
+    5. Encode the categorical features using `HashingEncoder`.
+    6. Combine numeric and categorical features into a single feature set.
+    7. Convert the 'status' column into a binary format where 'Terminated' is 1, and others are 0.
+    8. Process the data by grouping them based on the 'group' column and ensure each group has a fixed size of `group_size`.
+       - Pad or truncate the feature sequences to match the group size.
+       - Update instance counts and job names encountered in the dataset.
+    9. Print out summary statistics, including the job count, group count, and instance count.
+    10. Split the data into training and testing sets in a 70-30 ratio.
+    11. Split the data into training and testing sets using K-Folds cross-validation (with 4 splits).
+    12. Save the training and testing sets for each fold as `.npy` files.
+
+    Notes:
+    ------
+    - The function assumes the presence of a CSV file named 'start_time_seq_job.csv' in the 'data' directory.
+    - The preprocessing includes handling both numeric and categorical data.
+    - Data is split into training and testing sets using KFold cross-validation with 4 splits.
+    """
     pd.set_option('display.max_columns', None)
     DATA_DIR = 'data/'  # Adjust to your actual data directory
     df = pd.read_csv(DATA_DIR + 'start_time_seq_job.csv')
@@ -148,8 +185,6 @@ def load_data(group_size=10):
         np.save(f'y_test_fold{i+1}.npy', y_test)
 
     print("Data saved for each fold.")
-
-    return X_train, X_test, y_train, y_test
 
 if __name__ == '__main__':
     load_data(group_size=10)

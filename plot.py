@@ -57,16 +57,16 @@ def plot_best_comparisons_bar(results, metric_names, model_names):
     num_metrics = len(metric_names)
     num_models = len(model_names)
 
-    # 设定不同的颜色，确保颜色数量足够
-    # colors = list(mcolors.TABLEAU_COLORS)  # 使用Matplotlib的Tableau颜色，或选择其他颜色列表
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
               'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan']
-    fig, axes = plt.subplots(nrows=num_metrics, figsize=(3, 10), sharex=True)  # 更紧凑的图形
 
-    bar_width = 1  # 将柱子宽度设置为1，让柱子之间没有间隙
+    fig, axes = plt.subplots(nrows=num_metrics, figsize=(3, 10), sharex=True)
+
+    bar_width = 1
 
     for metric_idx, ax in enumerate(axes):
         max_vals = np.zeros(num_models)
+
 
         for model_idx in range(num_models):
             max_vals[model_idx] = np.max(results[model_idx, metric_idx, :])
@@ -74,9 +74,13 @@ def plot_best_comparisons_bar(results, metric_names, model_names):
         x_pos = np.arange(num_models)
         bars = ax.bar(x_pos, max_vals, bar_width, alpha=0.7)
 
-        # 为每个柱子设置不同的颜色
+        # set color for each bar
         for bar, color in zip(bars, colors):
             bar.set_color(color)
+            # print results
+            height = bar.get_height()
+            # print the value on the top of the bar
+            print(f'{metric_names[metric_idx]} - {model_names[int(bar.get_x() + bar.get_width() / 2.0)]}: {height:.10f}')
 
         ax.set_ylabel(metric_names[metric_idx])
         ax.set_title(f'Maximum {metric_names[metric_idx]} Across All Epochs')
@@ -84,8 +88,6 @@ def plot_best_comparisons_bar(results, metric_names, model_names):
         ax.set_xticklabels(model_names)
         # move legend outside of the plot`
         ax.legend(bars, model_names, title="Model", loc="center left", bbox_to_anchor=(1, 0.5))
-        # 设置Y轴范围为0.97到1
-        # ax.set_ylim([0.985, 1])
         # find the min value on the y-axis
         min_val = np.min(max_vals)
         # find the max value on the y-axis
@@ -128,6 +130,7 @@ if __name__ == '__main__':
 
     # 加载保存的结果数据
     results = np.load('results_ncplstm_no_posweight_0805_all_2.npy')
+    # results = np.load('results_fold4.npy')
     # remove 2-4
     # results = np.delete(results, 2, axis=0)
     # results = np.delete(results, 2, axis=0)

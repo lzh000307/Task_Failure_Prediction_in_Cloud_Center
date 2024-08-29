@@ -9,10 +9,9 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-from s2s_lstm import Seq2SeqModel
 from SequenceDataset import SequenceDataset
 from lstm import LSTM
-from network import BiLSTM
+from bi_lstm import BiLSTM
 from RNN import RNN
 from bi_ncp_model import BiNCPModel
 from ncp_model import NCPModel
@@ -355,7 +354,7 @@ if __name__ == '__main__':
     with open('epoch_labels_outputs_3070_1.pkl', 'wb') as f:
         pickle.dump(epoch_labels_outputs, f)
 
-    # 加载保存的结果数据
+    # load data to plot
     # results = np.load('results_ncp.npy')
     # results = np.load('results_ncp001.npy')
     # results = np.load('results_ncplstm_no_posweight_ep20.npy')

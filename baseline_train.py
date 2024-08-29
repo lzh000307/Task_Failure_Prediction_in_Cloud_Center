@@ -5,16 +5,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import category_encoders as ce
-
-from cnn_model import SimpleCNN
-from dataset import dataset
-from network import BiLSTM
-# Assuming 'utils.py' contains necessary custom functions such as get_df, get_dfa, etc.
+from bi_lstm import BiLSTM
 from utils import *
-from scipy.sparse import hstack, csr_matrix
 
 
 def load_data():
@@ -115,7 +110,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using {device} device")
 
-    model = SimpleCNN(input_channels=1, num_classes=1).to(device)
+    # model = CNN(input_channels=1, num_classes=1).to(device)
+    model = BiLSTM(X_train.shape[2], hidden_dim=32, output_dim=1, num_layers=1).to(device)
     train_dataset = TensorDataset(X_train, y_train)
     test_dataset = TensorDataset(X_test, y_test)
-    train_and_validate(model, train_dataset, test_dataset, device, lr=0.001, num_epochs=10, batch_size=4096, confidence=0.7)
+    train_and_validate(model, train_dataset, test_dataset, device, lr=0.003, num_epochs=10, batch_size=4096, confidence=0.7)

@@ -43,11 +43,11 @@ def load_data():
     status_counts_dfs = only_dfs_filled['status'].value_counts()
     status_counts_dfm = only_dfm_filled['status'].value_counts()
 
-    print("同时dfs和dfm非空时，各状态的数量:")
+    print("When both dfs and dfm are not empty, the number of states:")
     print(status_counts_both)
-    print("\ndfs非空时（不管dfm），各状态的数量:")
+    print("\nWhen dfs is not empty (regardless of dfm), the number of states:")
     print(status_counts_dfs)
-    print("\ndfm非空时（不管dfs），各状态的数量:")
+    print("\nWhen dfm is not empty (regardless of dfs), the number of states:")
     print(status_counts_dfm)
 
 load_data()

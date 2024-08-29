@@ -8,24 +8,12 @@ import torch.optim as optim
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-
-from s2s_lstm import s2s_lstm
-from lstm import LSTM
-from network import BiLSTM
-from RNN import RNN
+from bi_lstm import BiLSTM
 from bi_ncp_model import BiNCPModel
 from ncp_model import NCPModel
 
-
-import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-import category_encoders as ce
 
-from s2s_bi_ncp import s2s_bi_ncp
-from s2s_bi_lstm import s2s_bi_lstm
-from s2s_ncp import s2s_ncp
 
 def train_and_validate(model, train_loader, val_loader, device, lr=0.00001, num_epochs=4, batch_size=1024, confidence=0.8):
     # dataloader
@@ -230,10 +218,10 @@ if __name__ == '__main__':
         y_train = torch.tensor(y_train, dtype=torch.float32)
         y_test = torch.tensor(y_test, dtype=torch.float32)
 
-        # 使用gpu
+        # use gpu
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        # 打印数据维度信息
+        # print the data
         print(f"Fold {fold + 1}, Using {device} device")
         print(f"input_dim: {X_train.shape[2]}, sequence_length: {X_train.shape[1]}")
 
@@ -254,4 +242,4 @@ if __name__ == '__main__':
         np.save(f'results_fold{fold + 1}.npy', fold_results)
 
     # save the results
-    np.save('results_k_fold.npy', np.array(results))  # 多个fold的结果保存到一个文件中
+    np.save('results_k_fold.npy', np.array(results))
